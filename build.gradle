@@ -43,7 +43,7 @@ dependencies {
 	// --- 개발 편의 ---
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-	// --- 시큐리티 & JWT (필요하면 유지) ---
+	// --- 시큐리티 & JWT ---
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
