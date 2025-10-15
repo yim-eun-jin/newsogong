@@ -35,10 +35,11 @@ public class PostResponseDto {
 
     private String aiFeedback;
 
+
     public static PostResponseDto from(Post post) {
         return new PostResponseDto(
                 post.getPostId(),
-                post.getUserId(),
+                post.getUser().getId(),
                 post.getTitle(),
                 post.getContent(),
                 post.getLangTags(),

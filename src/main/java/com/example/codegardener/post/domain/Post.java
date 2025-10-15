@@ -1,8 +1,8 @@
 package com.example.codegardener.post.domain;
 
+import com.example.codegardener.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -15,8 +15,9 @@ public class Post {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long postId; //PK
 
-    @Column (nullable = false)
-    private Long userId; //작성자
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false) // post.user_id FK
+    private User user;
 
     //-----필수입력-----
     @Column (nullable = false, length = 200)

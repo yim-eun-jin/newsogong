@@ -2,17 +2,11 @@ package com.example.codegardener.post.controller;
 
 import com.example.codegardener.post.dto.PostRequestDto;
 import com.example.codegardener.post.dto.PostResponseDto;
-import com.example.codegardener.post.dto.PostActionDto;
-import com.example.codegardener.post.dto.PostSimpleResponseDto;
 import com.example.codegardener.post.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -162,35 +156,4 @@ public class PostController {
                 ? feedback
                 : "AI 피드백이 아직 생성되지 않았습니다.";
     }
-    @PostMapping("/likes")
-    public ResponseEntity<Void> toggleLike(@RequestBody PostActionDto postActionDto) {
-        postService.toggleLike(postActionDto);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/scraps")
-    public ResponseEntity<Void> toggleScrap(@RequestBody PostActionDto postActionDto) {
-        postService.toggleScrap(postActionDto);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping("/my-scraps")
-    public ResponseEntity<List<PostSimpleResponseDto>> getMyScraps(
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        String username = userDetails.getUsername();
-
-        List<PostSimpleResponseDto> scrappedPosts = postService.getMyScrappedPosts(username);
-        return ResponseEntity.ok(scrappedPosts);
-    }
-
-    @GetMapping
-    public ResponseEntity<Page<PostResponseDto>> getPostList(
-            @RequestParam(required = false) Boolean contentsType,
-            @PageableDefault(size = 10, sort = "createdAt,desc") Pageable pageable) {
-
-        Page<PostResponseDto> postPage = postService.getPostList(contentsType, pageable);
-        return ResponseEntity.ok(postPage);
-    }
-
 }
