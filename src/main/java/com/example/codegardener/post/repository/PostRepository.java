@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface PostRepository extends JpaRepository<Post, Long> {
 
     // 1) 키워드 단건 검색 (제목/내용/작성자) — 파라미터 1개 (LIKE용)
@@ -70,4 +72,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             @Param("sort") String sort,
             Pageable pageable
     );
+    // 특정 사용자가 작성한 게시물 목록 조회
+    List<Post> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    // 특정 타입의 게시물 중 좋아요가 많은 상위 4개를 조회
+    List<Post> findTop4ByContentsTypeOrderByLikesCountDesc(Boolean contentsType);
 }
