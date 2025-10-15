@@ -186,4 +186,12 @@ public class FeedbackService {
                 .map(FeedbackCommentDto::fromEntity)
                 .collect(Collectors.toList());
     }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<FeedbackSimpleResponseDto> getFeedbacksByUserId(Long userId) {
+        List<Feedback> feedbacks = feedbackRepository.findByUserId(userId);
+        return feedbacks.stream()
+                .map(FeedbackSimpleResponseDto::new)
+                .collect(Collectors.toList());
+    }
 }
