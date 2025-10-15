@@ -26,8 +26,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'   // Bean Validation
 
 	// --- (선택) WebFlux: WebClient 등 리액티브 클라이언트가 필요할 때만 유지 ---
-	// implementation 'org.springframework.boot:spring-boot-starter-webflux'
-	// implementation "io.netty:netty-resolver-dns-native-macos:4.1.127.Final:osx-aarch_64" // Apple Silicon일 때만
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	implementation "io.netty:netty-resolver-dns-native-macos:4.1.127.Final:osx-aarch_64" // Apple Silicon일 때만
 
 	// --- JSON 유틸 (선택) ---
 	implementation 'org.json:json:20240303'
