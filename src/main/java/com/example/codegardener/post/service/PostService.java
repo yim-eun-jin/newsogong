@@ -2,9 +2,16 @@ package com.example.codegardener.post.service;
 
 import com.example.codegardener.ai.service.AiFeedbackService;
 import com.example.codegardener.post.domain.Post;
+import com.example.codegardener.post.domain.PostLike;
+import com.example.codegardener.post.domain.PostScrap;
+import com.example.codegardener.post.domain.PostScrapId;
+import com.example.codegardener.post.dto.PostActionDto;
 import com.example.codegardener.post.dto.PostRequestDto;
 import com.example.codegardener.post.dto.PostResponseDto;
+import com.example.codegardener.post.dto.PostSimpleResponseDto;
+import com.example.codegardener.post.repository.PostLikeRepository;
 import com.example.codegardener.post.repository.PostRepository;
+import com.example.codegardener.post.repository.PostScrapRepository;
 import com.example.codegardener.user.domain.User;
 import com.example.codegardener.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +31,9 @@ public class PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;          // ✅ 추가
     private final AiFeedbackService aiFeedbackService;
+    private final PostLikeRepository postLikeRepository;
+    private final PostScrapRepository postScrapRepository;
+
 
     // ====================== CRUD ======================
 
@@ -247,5 +257,84 @@ public class PostService {
                 .replace("%", "\\%")
                 .replace("_", "\\_");
         return "%" + t + "%";
+    }
+
+    @Transactional
+    public void toggleLike(PostActionDto dto) {
+        Optional<PostLike> existingLike = postLikeRepository.findByUserIdAndPostId(dto.getUserId(), dto.getPostId());
+        if (existingLike.isPresent()) {
+            postLikeRepository.delete(existingLike.get());
+        } else {
+            PostLike newLike = new PostLike();
+            newLike.setUserId(dto.getUserId());
+            newLike.setPostId(dto.getPostId());
+            postLikeRepository.save(newLike);
+        }
+    }
+
+    @Transactional
+    public void toggleScrap(PostActionDto dto) {
+        Optional<PostScrap> existingScrap = postScrapRepository.findById(new PostScrapId(dto.getUserId(), dto.getPostId()));
+        if (existingScrap.isPresent()) {
+            postScrapRepository.delete(existingScrap.get());
+        } else {
+            PostScrap newScrap = new PostScrap();
+            newScrap.setUserId(dto.getUserId());
+            newScrap.setPostId(dto.getPostId());
+            postScrapRepository.save(newScrap);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<PostSimpleResponseDto> getMyScrappedPosts(String username) {
+        User user = userRepository.findByUserName(username)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        Long userId = user.getId();
+
+        List<PostScrap> scraps = postScrapRepository.findAllByUserId(userId);
+
+        List<Long> postIds = scraps.stream()
+                .map(PostScrap::getPostId)
+                .toList();
+
+        if (postIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return postRepository.findAllById(postIds).stream()
+                .map(PostSimpleResponseDto::new)
+                .collect(Collectors.toList());
+    }
+
+    // 특정 사용자가 등록한 게시물 조회
+    @Transactional(readOnly = true)
+    public List<PostSimpleResponseDto> getPostsByUserId(Long userId) {
+        List<Post> posts = postRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        // stream()과 map()을 사용하여 각 Post 객체를 PostSimpleResponseDto로 변환
+        return posts.stream()
+                .map(PostSimpleResponseDto::new)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PostResponseDto> getPostList(Boolean contentsType, Pageable pageable) {
+        Page<Post> postPage;
+
+        if (contentsType == null) {
+            postPage = postRepository.findAll(pageable);
+        } else {
+            postPage = postRepository.findByContentsType(contentsType, pageable);
+        }
+
+        // 조회된 Page<Post>를 Page<PostResponseDto>로 변환하여 반환
+        return postPage.map(PostResponseDto::from);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PostSimpleResponseDto> getPopularPosts(Boolean contentsType) {
+        List<Post> popularPosts = postRepository.findTop4ByContentsTypeOrderByLikesCountDesc(contentsType);
+        return popularPosts.stream()
+                .map(PostSimpleResponseDto::new) // Post를 간단한 DTO로 변환
+                .collect(Collectors.toList());
     }
 }
