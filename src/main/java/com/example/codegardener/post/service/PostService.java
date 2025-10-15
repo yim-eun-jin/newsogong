@@ -2,21 +2,25 @@ package com.example.codegardener.post.service;
 
 import com.example.codegardener.ai.service.AiFeedbackService;
 import com.example.codegardener.post.domain.Post;
+import com.example.codegardener.post.domain.PostLike;
+import com.example.codegardener.post.domain.PostScrap;
+import com.example.codegardener.post.domain.PostScrapId;
+import com.example.codegardener.post.dto.PostActionDto;
 import com.example.codegardener.post.dto.PostRequestDto;
 import com.example.codegardener.post.dto.PostResponseDto;
+import com.example.codegardener.post.dto.PostSimpleResponseDto;
+import com.example.codegardener.post.repository.PostLikeRepository;
 import com.example.codegardener.post.repository.PostRepository;
+import com.example.codegardener.post.repository.PostScrapRepository;
+import com.example.codegardener.user.domain.User;
+import com.example.codegardener.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -25,9 +29,12 @@ import java.util.stream.Collectors;
 public class PostService {
 
     private final PostRepository postRepository;
+    private final PostLikeRepository postLikeRepository;
+    private final PostScrapRepository postScrapRepository;
+    private final UserRepository userRepository;
     private final AiFeedbackService aiFeedbackService;
 
-    // CRUD
+    // ===================== CRUD =====================
 
     @Transactional
     public PostResponseDto create(PostRequestDto dto) {
@@ -59,9 +66,9 @@ public class PostService {
                 .toList();
     }
 
-    // 목록
-     /* 목록(페이징)
-     * contentsType: null=전체 / true=개발 / false=코테
+    /**
+     * 페이징 목록
+     * contentsType: null=전체, true=개발, false=코테
      * sortBy: latest | views | feedback
      */
     @Transactional(readOnly = true)
@@ -81,6 +88,15 @@ public class PostService {
                 : postRepository.findByContentsType(contentsType, pageable);
 
         return data.map(PostResponseDto::from);
+    }
+
+    /** Pageable을 그대로 받는 목록 (컨트롤러의 /api/posts 에서 사용) */
+    @Transactional(readOnly = true)
+    public Page<PostResponseDto> getPostList(Boolean contentsType, Pageable pageable) {
+        Page<Post> postPage = (contentsType == null)
+                ? postRepository.findAll(pageable)
+                : postRepository.findByContentsType(contentsType, pageable);
+        return postPage.map(PostResponseDto::from);
     }
 
     @Transactional(readOnly = true)
@@ -124,43 +140,34 @@ public class PostService {
         postRepository.delete(p);
     }
 
-    // 통합 검색
+    // ===================== 통합 검색 =====================
 
     /**
      * 통합 검색 (키워드 + 언어OR + 스택OR + 탭AND + 정렬 + 페이징)
-     * /posts/search 에서 호출
+     * - 컨트롤러: /api/posts/search
      * - 키워드: title/content/username LIKE '%q%' (대소문자 무시, %, _ 이스케이프)
-     * - 언어/스택: CSV 문자열을 REGEXP OR 패턴으로 변환 (예: (^|,)(java|python)(,|$))
-     * - 정렬: latest(기본) | views | feedback (native ORDER BY에서 처리)
+     * - 언어/스택: CSV → REGEXP OR 패턴 (예: (^|,)(java|python)(,|$))
+     * - 정렬: latest(기본) | views | feedback (쿼리에서 처리)
      */
     @Transactional(readOnly = true)
     public Page<PostResponseDto> discoverAdvanced(
             String q,
-            List<String> languages,   // ?languages=java&languages=python
-            String langsCsv,          // 또는 ?langs=java,python
-            List<String> stacks,      // ?stacks=spring&stacks=docker
-            String stacksCsv,         // 또는 ?tech=spring,docker
-            Boolean contentsType,     // 탭 필터
+            List<String> languages,
+            String langsCsv,
+            List<String> stacks,
+            String stacksCsv,
+            Boolean contentsType,
             int page,
             int size,
-            String sortKey            // latest | views | feedback
+            String sortKey
     ) {
         page = Math.max(page, 0);
         size = Math.min(Math.max(size, 1), 50);
+        Pageable pageable = PageRequest.of(page, size); // 정렬은 네이티브 쿼리에서
 
-        // 정렬은 native ORDER BY가 처리
-        Pageable pageable = PageRequest.of(page, size);
-
-        // 키워드 1개 (NULL이면 조건 무시) — %, _ 이스케이프 처리
         String qLike = buildLikeParam(q);
-
-        // 언어/스택 파라미터 정규화 (배열 + CSV → OR)
-        List<String> langList  = mergeParamsToList(languages, langsCsv);
-        List<String> stackList = mergeParamsToList(stacks,    stacksCsv);
-
-        // CSV 칼럼용 REGEXP 패턴: (^|,)(java|python)(,|$)
-        String langRegex  = listToRegex(langList);
-        String stackRegex = listToRegex(stackList);
+        String langRegex  = listToRegex(mergeParamsToList(languages, langsCsv));
+        String stackRegex = listToRegex(mergeParamsToList(stacks,    stacksCsv));
 
         Page<Post> data = postRepository.discover(
                 qLike,
@@ -170,21 +177,89 @@ public class PostService {
                 safe(sortKey),
                 pageable
         );
-
         return data.map(PostResponseDto::from);
     }
 
-    // AI 피드백
+    // ===================== 좋아요 / 스크랩 =====================
+
+    @Transactional
+    public void toggleLike(PostActionDto dto) {
+        postLikeRepository.findByUserIdAndPostId(dto.getUserId(), dto.getPostId())
+                .ifPresentOrElse(
+                        postLikeRepository::delete,
+                        () -> {
+                            PostLike nl = new PostLike();
+                            nl.setUserId(dto.getUserId());
+                            nl.setPostId(dto.getPostId());
+                            postLikeRepository.save(nl);
+                        }
+                );
+    }
+
+    @Transactional
+    public void toggleScrap(PostActionDto dto) {
+        PostScrapId key = new PostScrapId(dto.getUserId(), dto.getPostId());
+        postScrapRepository.findById(key)
+                .ifPresentOrElse(
+                        postScrapRepository::delete,
+                        () -> {
+                            PostScrap ns = new PostScrap();
+                            ns.setUserId(dto.getUserId());
+                            ns.setPostId(dto.getPostId());
+                            postScrapRepository.save(ns);
+                        }
+                );
+    }
+
+    /** 내 스크랩 목록 (username 기준) */
+    @Transactional(readOnly = true)
+    public List<PostSimpleResponseDto> getMyScrappedPosts(String username) {
+        User user = userRepository.findByUserName(username)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        Long userId = user.getId();
+
+        List<Long> postIds = postScrapRepository.findAllByUserId(userId)
+                .stream().map(PostScrap::getPostId).toList();
+
+        if (postIds.isEmpty()) return List.of();
+
+        return postRepository.findAllById(postIds)
+                .stream()
+                .map(PostSimpleResponseDto::new)
+                .collect(Collectors.toList());
+    }
+
+    /** 특정 사용자가 등록한 게시물 (최신순) */
+    @Transactional(readOnly = true)
+    public List<PostSimpleResponseDto> getPostsByUserId(Long userId) {
+        // ✔ PostRepository에 아래 메서드가 필요:
+        // List<Post> findByUserIdOrderByCreatedAtDesc(Long userId);
+        return postRepository.findByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(PostSimpleResponseDto::new)
+                .collect(Collectors.toList());
+    }
+
+    /** 인기 게시물 TOP4 (likesCount 내림차순) */
+    @Transactional(readOnly = true)
+    public List<PostSimpleResponseDto> getPopularPosts(Boolean contentsType) {
+        // ✔ PostRepository에 아래 메서드가 필요:
+        // List<Post> findTop4ByContentsTypeOrderByLikesCountDesc(Boolean contentsType);
+        return postRepository.findTop4ByContentsTypeOrderByLikesCountDesc(contentsType)
+                .stream()
+                .map(PostSimpleResponseDto::new)
+                .collect(Collectors.toList());
+    }
+
+    // ===================== AI 피드백 =====================
 
     @Transactional
     public PostResponseDto generateAiFeedback(Long postId, Long requesterId) {
         if (requesterId != null) {
             log.debug("[AI] generate request by userId={} for postId={}", requesterId, postId);
         }
-
         Post p = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다."));
-
         String aiText = aiFeedbackService.generateTextForPost(postId);
         p.setAiFeedback(aiText);
         log.info("[AI] Feedback generated manually for postId={}", postId);
@@ -198,7 +273,7 @@ public class PostService {
         return p.getAiFeedback();
     }
 
-    // 유틸
+    // ===================== Utils =====================
 
     private void validateCodingTest(PostRequestDto dto) {
         if (Boolean.FALSE.equals(dto.getContentsType())
@@ -238,7 +313,7 @@ public class PostService {
     private String listToRegex(List<String> values) {
         if (values == null || values.isEmpty()) return null;
         String body = values.stream()
-                .map(this::escapeRegex) // 정규식 메타문자 이스케이프
+                .map(this::escapeRegex)
                 .collect(Collectors.joining("|"));
         return "(^|,)(" + body + ")(,|$)";
     }
@@ -254,15 +329,14 @@ public class PostService {
     }
 
     /**
-     * LIKE용 파라미터 생성 (대소문자 무시 + 와일드카드 이스케이프)
-     * - 입력이 비어있으면 null 반환 → WHERE에서 조건 무시
-     * - %, _ 는 ESCAPE '\\' 와 함께 안전하게 검색되도록 백슬래시로 이스케이프
+     * LIKE 파라미터 생성 (대소문자 무시 + 와일드카드 이스케이프)
+     * - 입력 비어있으면 null → WHERE에서 조건 무시
+     * - %, _ 는 ESCAPE '\\'와 함께 안전하게 검색되도록 이스케이프
      */
     private String buildLikeParam(String raw) {
         if (raw == null) return null;
         String t = raw.trim().toLowerCase();
         if (t.isEmpty()) return null;
-        // 백슬래시 → \\\\ , % → \% , _ → \_
         t = t.replace("\\", "\\\\")
                 .replace("%", "\\%")
                 .replace("_", "\\_");
