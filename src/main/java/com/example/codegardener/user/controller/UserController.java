@@ -14,24 +14,20 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/api/user")
 public class UserController {
-
     private final UserService userService;
 
-    // 회원가입 API
     @PostMapping("/signup")
     public ResponseEntity<UserResponseDto> signUp(@RequestBody SignUpRequestDto signUpRequestDto) {
         UserResponseDto userResponseDto = userService.signUp(signUpRequestDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(userResponseDto);
     }
 
-    // 로그인 API
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto loginRequestDto) {
         String token = userService.login(loginRequestDto);
         return ResponseEntity.ok(new LoginResponseDto(token));
     }
 
-    // 사용자 조회 (마이페이지) API
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponseDto> getUserProfile(@PathVariable Long userId) {
         UserResponseDto userResponseDto = userService.getUserProfile(userId);

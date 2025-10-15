@@ -1,4 +1,4 @@
-package com.example.codegardener.user.entity;
+package com.example.codegardener.user.domain;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -11,13 +11,12 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class UserProfile {
-
     @Id
     @Column(name = "user_id")
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @MapsId // User의 ID를 UserProfile의 ID로 사용
+    @MapsId
     @JoinColumn(name = "user_id")
     private User user;
 

@@ -1,4 +1,4 @@
-package com.example.codegardener.user.role;
+package com.example.codegardener.user.domain;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

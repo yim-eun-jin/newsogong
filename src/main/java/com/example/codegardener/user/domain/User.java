@@ -1,6 +1,5 @@
-package com.example.codegardener.user.entity;
+package com.example.codegardener.user.domain;
 
-import com.example.codegardener.user.role.Role;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,7 +11,6 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class User {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
@@ -31,7 +29,6 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
-    // UserProfile과의 1:1 관계 설정
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private UserProfile userProfile;
 }
