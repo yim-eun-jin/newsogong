@@ -20,17 +20,16 @@ repositories {
 
 dependencies {
 	// --- Spring Boot 기본 ---
-	implementation 'org.springframework.boot:spring-boot-starter'            // core + logging
-	implementation 'org.springframework.boot:spring-boot-starter-web'        // MVC (Tomcat)
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'   // JPA/Hibernate
-	implementation 'org.springframework.boot:spring-boot-starter-validation' // Bean Validation
+	implementation 'org.springframework.boot:spring-boot-starter'
+	implementation 'org.springframework.boot:spring-boot-starter-web'          // MVC (Tomcat)
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'     // JPA/Hibernate
+	implementation 'org.springframework.boot:spring-boot-starter-validation'   // Bean Validation
 
-	// --- WebFlux (WebClient 등 리액티브 클라이언트용) ---
-	implementation 'org.springframework.boot:spring-boot-starter-webflux'
-	// Apple Silicon(macOS aarch64) 네이티브 DNS (필요할 때만 유지)
-	implementation "io.netty:netty-resolver-dns-native-macos:4.1.127.Final:osx-aarch_64"
+	// --- (선택) WebFlux: WebClient 등 리액티브 클라이언트가 필요할 때만 유지 ---
+	// implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	// implementation "io.netty:netty-resolver-dns-native-macos:4.1.127.Final:osx-aarch_64" // Apple Silicon일 때만
 
-	// --- JSON 유틸 ---
+	// --- JSON 유틸 (선택) ---
 	implementation 'org.json:json:20240303'
 
 	// --- Lombok ---
@@ -39,6 +38,7 @@ dependencies {
 
 	// --- DB 드라이버 ---
 	runtimeOnly 'com.mysql:mysql-connector-j'
+	// testRuntimeOnly 'com.h2database:h2' // 테스트용 인메모리 DB가 필요하면
 
 	// --- 개발 편의 ---
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -54,6 +54,7 @@ dependencies {
 
 	// --- 테스트 ---
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
