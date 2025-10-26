@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 public class PostService {
 
     private final PostRepository postRepository;
-    private final UserRepository userRepository;          // ✅ 추가
+    private final UserRepository userRepository;
     private final AiFeedbackService aiFeedbackService;
     private final PostLikeRepository postLikeRepository;
     private final PostScrapRepository postScrapRepository;
@@ -41,7 +41,7 @@ public class PostService {
     public PostResponseDto create(PostRequestDto dto) {
         validateCodingTest(dto);
 
-        // ✅ 작성자 엔티티 조회 후 연관관계로 설정
+        // 작성자 엔티티 조회 후 연관관계로 설정
         User author = userRepository.findById(dto.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("작성자 정보를 찾을 수 없습니다. userId=" + dto.getUserId()));
 
@@ -103,7 +103,7 @@ public class PostService {
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다."));
 
-        // ✅ 연관관계 기준으로 권한 확인
+        // 연관관계 기준으로 권한 확인
         Long ownerId = (p.getUser() != null) ? p.getUser().getId() : null;
         if (!Objects.equals(ownerId, currentUserId)) {
             throw new IllegalStateException("수정 권한이 없습니다.");
