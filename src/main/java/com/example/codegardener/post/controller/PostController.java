@@ -3,7 +3,6 @@ package com.example.codegardener.post.controller;
 import com.example.codegardener.post.dto.PostActionDto;
 import com.example.codegardener.post.dto.PostRequestDto;
 import com.example.codegardener.post.dto.PostResponseDto;
-import com.example.codegardener.post.dto.PostSimpleResponseDto;
 import com.example.codegardener.post.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -140,11 +139,11 @@ public class PostController {
     }
 
     @GetMapping("/my-scraps")
-    public ResponseEntity<List<PostSimpleResponseDto>> getMyScraps(
+    public ResponseEntity<List<PostResponseDto>> getMyScraps(
             @AuthenticationPrincipal UserDetails userDetails) {
 
         String username = userDetails.getUsername();
-        List<PostSimpleResponseDto> scrappedPosts = postService.getMyScrappedPosts(username);
+        List<PostResponseDto> scrappedPosts = postService.getMyScrappedPosts(username);
         return ResponseEntity.ok(scrappedPosts);
     }
 }

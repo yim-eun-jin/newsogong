@@ -154,7 +154,7 @@ public class FeedbackController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<FeedbackSimpleResponseDto>> getFeedbacksByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<FeedbackResponseDto>> getFeedbacksByUser(@PathVariable Long userId) {
         return ResponseEntity.ok(feedbackService.getFeedbacksByUserId(userId));
     }
 }

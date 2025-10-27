@@ -8,7 +8,6 @@ import com.example.codegardener.post.domain.PostScrapId;
 import com.example.codegardener.post.dto.PostActionDto;
 import com.example.codegardener.post.dto.PostRequestDto;
 import com.example.codegardener.post.dto.PostResponseDto;
-import com.example.codegardener.post.dto.PostSimpleResponseDto;
 import com.example.codegardener.post.repository.PostLikeRepository;
 import com.example.codegardener.post.repository.PostRepository;
 import com.example.codegardener.post.repository.PostScrapRepository;
@@ -286,7 +285,7 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public List<PostSimpleResponseDto> getMyScrappedPosts(String username) {
+    public List<PostResponseDto> getMyScrappedPosts(String username) {
         User user = userRepository.findByUserName(username)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         Long userId = user.getId();
@@ -302,17 +301,17 @@ public class PostService {
         }
 
         return postRepository.findAllById(postIds).stream()
-                .map(PostSimpleResponseDto::new)
+                .map(PostResponseDto::from)
                 .collect(Collectors.toList());
     }
 
     // 특정 사용자가 등록한 게시물 조회
     @Transactional(readOnly = true)
-    public List<PostSimpleResponseDto> getPostsByUserId(Long userId) {
+    public List<PostResponseDto> getPostsByUserId(Long userId) {
         List<Post> posts = postRepository.findByUserIdOrderByCreatedAtDesc(userId);
         // stream()과 map()을 사용하여 각 Post 객체를 PostSimpleResponseDto로 변환
         return posts.stream()
-                .map(PostSimpleResponseDto::new)
+                .map(PostResponseDto::from)
                 .collect(Collectors.toList());
     }
 
@@ -331,10 +330,10 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public List<PostSimpleResponseDto> getPopularPosts(Boolean contentsType) {
+    public List<PostResponseDto> getPopularPosts(Boolean contentsType) {
         List<Post> popularPosts = postRepository.findTop4ByContentsTypeOrderByLikesCountDesc(contentsType);
         return popularPosts.stream()
-                .map(PostSimpleResponseDto::new) // Post를 간단한 DTO로 변환
+                .map(PostResponseDto::from) // Post를 간단한 DTO로 변환
                 .collect(Collectors.toList());
     }
 }
