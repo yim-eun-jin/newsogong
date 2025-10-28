@@ -12,6 +12,7 @@ import com.example.codegardener.post.repository.PostLikeRepository;
 import com.example.codegardener.post.repository.PostRepository;
 import com.example.codegardener.post.repository.PostScrapRepository;
 import com.example.codegardener.user.domain.User;
+import com.example.codegardener.user.domain.Role;
 import com.example.codegardener.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -133,7 +134,10 @@ public class PostService {
 
         Long ownerId = (p.getUser() != null) ? p.getUser().getId() : null;
 
-        if (!Objects.equals(ownerId, currentUser.getId())) {
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = Objects.equals(ownerId, currentUser.getId());
+
+        if (!isOwner && !isAdmin) { // 본인도 아니고 관리자도 아니면
             throw new IllegalStateException("삭제 권한이 없습니다.");
         }
 

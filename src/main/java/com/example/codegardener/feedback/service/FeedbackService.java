@@ -6,12 +6,14 @@ import com.example.codegardener.feedback.repository.*;
 import com.example.codegardener.post.domain.Post;
 import com.example.codegardener.post.repository.PostRepository;
 import com.example.codegardener.user.domain.User;
+import com.example.codegardener.user.domain.Role;
 import com.example.codegardener.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -87,9 +89,15 @@ public class FeedbackService {
         Post post = postRepository.findById(feedback.getPostId())
                 .orElseThrow(() -> new IllegalArgumentException("게시물을 찾을 수 없습니다."));
 
-        if (!feedback.getUserId().equals(currentUser.getId())) {
-            throw new IllegalStateException("본인만 피드백을 삭제할 수 있습니다.");
+        Long ownerId = feedback.getUserId();
+
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = Objects.equals(ownerId, currentUser.getId());
+
+        if (!isOwner && !isAdmin) { // 본인도 아니고 관리자도 아니면
+            throw new IllegalStateException("삭제 권한이 없습니다.");
         }
+
         if (feedback.getAdoptedTF()) {
             throw new IllegalStateException("채택된 피드백은 삭제할 수 없습니다.");
         }

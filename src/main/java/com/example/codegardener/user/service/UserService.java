@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,9 +75,7 @@ public class UserService {
         return new UserResponseDto(user);
     }
 
-    // =============================
-    // ==== Leaderboard Service ====
-    // =============================
+    // ===== 리더보드 기능 =====
 
     // 누적 포인트 TOP3
     public List<UserResponseDto> getTop3LeaderboardByPoints() {
@@ -130,5 +129,28 @@ public class UserService {
                 .flatMap(id -> users.stream().filter(u -> u.getId().equals(id)))
                 .map(UserResponseDto::new)
                 .collect(Collectors.toList());
+    }
+
+    // ===== 관리자 기능 =====
+    @Transactional
+    public void deleteUserByAdmin(Long userIdToDelete, String adminUsername) {
+        User adminUser = userRepository.findByUserName(adminUsername)
+                .orElseThrow(() -> new IllegalArgumentException("관리자 계정을 찾을 수 없습니다."));
+
+        if (adminUser.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("사용자 삭제 권한이 없습니다.");
+        }
+
+        User userToDelete = userRepository.findById(userIdToDelete)
+                .orElseThrow(() -> new IllegalArgumentException("삭제할 사용자를 찾을 수 없습니다. ID: " + userIdToDelete));
+
+        if (userToDelete.getId().equals(adminUser.getId())) {
+            throw new IllegalArgumentException("자기 자신을 삭제할 수 없습니다.");
+        }
+
+        userRepository.delete(userToDelete);
+
+        // TODO: 사용자가 작성한 게시물, 피드백, 댓글, 좋아요 등을 어떻게 처리할지 정책 결정 필요
+        //       (예: 같이 삭제, null로 변경, '탈퇴한 사용자'로 표시 등)
     }
 }

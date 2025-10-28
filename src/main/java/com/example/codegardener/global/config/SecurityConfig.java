@@ -30,10 +30,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // 1. 인증 없이 항상 허용할 경로
+                        // 인증 없이 항상 허용할 경로
                         .requestMatchers("/api/user/signup", "/api/user/login").permitAll()
 
-                        // 2. 인증 없이 허용할 공개 GET 경로
+                        // 인증 없이 허용할 공개 GET 경로
                         .requestMatchers(HttpMethod.GET,
                                 "/api/posts",
                                 "/api/posts/{id}",
@@ -42,8 +42,8 @@ public class SecurityConfig {
                                 "/api/feedback/{feedbackId}",
                                 "/api/leaderboard/**",
                                 "/api/main").permitAll()
-
-                        // 3. 그 외 "모든 요청"은 인증 필요
+                        .requestMatchers(HttpMethod.DELETE, "/api/user/{userId}/admin").hasRole("ADMIN")
+                        // 그 외 "모든 요청"은 인증 필요
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
