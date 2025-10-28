@@ -30,13 +30,20 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // GET 요청은 인증 없이 모두 허용
-                        .requestMatchers(HttpMethod.GET).permitAll()
-
-                        // 회원가입, 로그인은 인증 없이 항상 허용 (POST 요청이지만 예외적으로 허용)
+                        // 1. 인증 없이 항상 허용할 경로
                         .requestMatchers("/api/user/signup", "/api/user/login").permitAll()
 
-                        // 위에서 허용한 경로 외의 모든 요청은 인증 필요
+                        // 2. 인증 없이 허용할 공개 GET 경로
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/posts",
+                                "/api/posts/{id}",
+                                "/api/posts/search",
+                                "/api/feedback/post/{postId}",
+                                "/api/feedback/{feedbackId}",
+                                "/api/leaderboard/**",
+                                "/api/main").permitAll()
+
+                        // 3. 그 외 "모든 요청"은 인증 필요
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

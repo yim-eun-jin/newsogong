@@ -64,24 +64,25 @@ public class PostController {
     @PutMapping("/{id}")
     public PostResponseDto update(
             @PathVariable Long id,
-            @Valid @RequestBody PostRequestDto dto
+            @Valid @RequestBody PostRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails // 1. UserDetails 주입
     ) {
-        if (dto.getUserId() == null) {
-            throw new IllegalArgumentException("수정 권한 확인을 위해 userId가 필요합니다.");
+        if (userDetails == null) {
+            throw new IllegalArgumentException("수정 권한 인증이 필요합니다.");
         }
-        return postService.update(id, dto, dto.getUserId());
+        return postService.update(id, dto, userDetails.getUsername());
     }
 
     // ====================== DELETE ======================
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
             @PathVariable Long id,
-            @RequestParam Long userId
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        if (userId == null) {
-            throw new IllegalArgumentException("삭제 권한 확인을 위해 userId가 필요합니다.");
+        if (userDetails == null) {
+            throw new IllegalArgumentException("삭제 권한 인증이 필요합니다.");
         }
-        postService.delete(id, userId);
+        postService.delete(id, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 

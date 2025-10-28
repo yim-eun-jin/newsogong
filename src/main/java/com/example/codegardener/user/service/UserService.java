@@ -123,7 +123,8 @@ public class UserService {
             return Collections.emptyList();
         }
         List<Long> userIds = userStats.stream().map(FeedbackRepository.UserFeedbackCount::getUserId).toList();
-        List<User> users = userRepository.findAllById(userIds);
+
+        List<User> users = userRepository.findAllByIdWithProfile(userIds);
 
         return userIds.stream()
                 .flatMap(id -> users.stream().filter(u -> u.getId().equals(id)))

@@ -5,6 +5,11 @@ import com.example.codegardener.feedback.service.FeedbackService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -16,12 +21,22 @@ public class FeedbackController {
 
     private final FeedbackService feedbackService;
 
+    private String getUsername(UserDetails userDetails) {
+        if (userDetails == null) {
+            throw new IllegalArgumentException("인증이 필요합니다.");
+        }
+        return userDetails.getUsername();
+    }
+
     /**
      * ✅ [POST] 피드백 작성
      */
     @PostMapping
-    public ResponseEntity<FeedbackResponseDto> createFeedback(@RequestBody FeedbackRequestDto dto) {
-        return ResponseEntity.ok(feedbackService.createFeedback(dto));
+    public ResponseEntity<FeedbackResponseDto> createFeedback(
+            @RequestBody FeedbackRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return ResponseEntity.ok(feedbackService.createFeedback(dto, getUsername(userDetails)));
     }
 
     /**
@@ -30,9 +45,10 @@ public class FeedbackController {
     @PutMapping("/{feedbackId}")
     public ResponseEntity<FeedbackResponseDto> updateFeedback(
             @PathVariable Long feedbackId,
-            @RequestBody FeedbackRequestDto dto
+            @RequestBody FeedbackRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        return ResponseEntity.ok(feedbackService.updateFeedback(feedbackId, dto));
+        return ResponseEntity.ok(feedbackService.updateFeedback(feedbackId, dto, getUsername(userDetails)));
     }
 
     /**
@@ -41,9 +57,9 @@ public class FeedbackController {
     @DeleteMapping("/{feedbackId}")
     public ResponseEntity<String> deleteFeedback(
             @PathVariable Long feedbackId,
-            @RequestParam Long userId
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        feedbackService.deleteFeedback(feedbackId, userId);
+        feedbackService.deleteFeedback(feedbackId, getUsername(userDetails));
         return ResponseEntity.ok("피드백이 삭제되었습니다.");
     }
 
@@ -69,9 +85,9 @@ public class FeedbackController {
     @PostMapping("/{feedbackId}/like")
     public ResponseEntity<String> toggleLike(
             @PathVariable Long feedbackId,
-            @RequestParam Long userId
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        return ResponseEntity.ok(feedbackService.toggleLike(feedbackId, userId));
+        return ResponseEntity.ok(feedbackService.toggleLike(feedbackId, getUsername(userDetails)));
     }
 
     // ======================================================
@@ -85,9 +101,10 @@ public class FeedbackController {
     @PostMapping("/{feedbackId}/line")
     public ResponseEntity<LineFeedbackDto> addLineFeedback(
             @PathVariable Long feedbackId,
-            @RequestBody LineFeedbackDto dto
+            @RequestBody LineFeedbackDto dto,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        return ResponseEntity.ok(feedbackService.addLineFeedback(feedbackId, dto));
+        return ResponseEntity.ok(feedbackService.addLineFeedback(feedbackId, dto, getUsername(userDetails)));
     }
 
     /**
@@ -109,9 +126,10 @@ public class FeedbackController {
     public ResponseEntity<LineFeedbackDto> updateLineFeedback(
             @PathVariable Long feedbackId,
             @PathVariable Long lineFeedbackId,
-            @RequestBody LineFeedbackDto dto
+            @RequestBody LineFeedbackDto dto,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        return ResponseEntity.ok(feedbackService.updateLineFeedback(feedbackId, lineFeedbackId, dto));
+        return ResponseEntity.ok(feedbackService.updateLineFeedback(feedbackId, lineFeedbackId, dto, getUsername(userDetails)));
     }
 
     /**
@@ -122,9 +140,9 @@ public class FeedbackController {
     public ResponseEntity<String> deleteLineFeedback(
             @PathVariable Long feedbackId,
             @PathVariable Long lineFeedbackId,
-            @RequestParam Long userId
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        feedbackService.deleteLineFeedback(feedbackId, lineFeedbackId, userId);
+        feedbackService.deleteLineFeedback(feedbackId, lineFeedbackId, getUsername(userDetails));
         return ResponseEntity.ok("라인피드백이 삭제되었습니다.");
     }
 
@@ -138,9 +156,10 @@ public class FeedbackController {
     @PostMapping("/{feedbackId}/comment")
     public ResponseEntity<FeedbackCommentDto> addComment(
             @PathVariable Long feedbackId,
-            @RequestBody FeedbackCommentDto dto
+            @RequestBody FeedbackCommentDto dto,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        return ResponseEntity.ok(feedbackService.addComment(feedbackId, dto));
+        return ResponseEntity.ok(feedbackService.addComment(feedbackId, dto, getUsername(userDetails)));
     }
 
     /**

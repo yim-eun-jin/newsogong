@@ -98,13 +98,15 @@ public class PostService {
     }
 
     @Transactional
-    public PostResponseDto update(Long id, PostRequestDto dto, Long currentUserId) {
+    public PostResponseDto update(Long id, PostRequestDto dto, String currentUsername) {
+        User currentUser = userRepository.findByUserName(currentUsername)
+                .orElseThrow(() -> new IllegalArgumentException("인증된 사용자를 찾을 수 없습니다."));
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다."));
 
-        // 연관관계 기준으로 권한 확인
         Long ownerId = (p.getUser() != null) ? p.getUser().getId() : null;
-        if (!Objects.equals(ownerId, currentUserId)) {
+
+        if (!Objects.equals(ownerId, currentUser.getId())) {
             throw new IllegalStateException("수정 권한이 없습니다.");
         }
 
@@ -124,12 +126,15 @@ public class PostService {
     }
 
     @Transactional
-    public void delete(Long id, Long currentUserId) {
+    public void delete(Long id, String currentUsername) {
+        User currentUser = userRepository.findByUserName(currentUsername)
+                .orElseThrow(() -> new IllegalArgumentException("인증된 사용자를 찾을 수 없습니다."));
         Post p = postRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다."));
 
         Long ownerId = (p.getUser() != null) ? p.getUser().getId() : null;
-        if (!Objects.equals(ownerId, currentUserId)) {
+
+        if (!Objects.equals(ownerId, currentUser.getId())) {
             throw new IllegalStateException("삭제 권한이 없습니다.");
         }
 
@@ -260,27 +265,37 @@ public class PostService {
 
     @Transactional
     public void toggleLike(PostActionDto dto) {
+        Post post = postRepository.findById(dto.getPostId())
+                .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다."));
+
         Optional<PostLike> existingLike = postLikeRepository.findByUserIdAndPostId(dto.getUserId(), dto.getPostId());
         if (existingLike.isPresent()) {
             postLikeRepository.delete(existingLike.get());
+            post.setLikesCount(Math.max(0, post.getLikesCount() - 1));
         } else {
             PostLike newLike = new PostLike();
             newLike.setUserId(dto.getUserId());
             newLike.setPostId(dto.getPostId());
             postLikeRepository.save(newLike);
+            post.setLikesCount(post.getLikesCount() + 1);
         }
     }
 
     @Transactional
     public void toggleScrap(PostActionDto dto) {
+        Post post = postRepository.findById(dto.getPostId())
+                .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다."));
+
         Optional<PostScrap> existingScrap = postScrapRepository.findById(new PostScrapId(dto.getUserId(), dto.getPostId()));
         if (existingScrap.isPresent()) {
             postScrapRepository.delete(existingScrap.get());
+            post.setScrapCount(Math.max(0, post.getScrapCount() - 1));
         } else {
             PostScrap newScrap = new PostScrap();
             newScrap.setUserId(dto.getUserId());
             newScrap.setPostId(dto.getPostId());
             postScrapRepository.save(newScrap);
+            post.setScrapCount(post.getScrapCount() + 1);
         }
     }
 

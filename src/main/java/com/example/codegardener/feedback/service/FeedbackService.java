@@ -3,6 +3,10 @@ package com.example.codegardener.feedback.service;
 import com.example.codegardener.feedback.domain.*;
 import com.example.codegardener.feedback.dto.*;
 import com.example.codegardener.feedback.repository.*;
+import com.example.codegardener.post.domain.Post;
+import com.example.codegardener.post.repository.PostRepository;
+import com.example.codegardener.user.domain.User;
+import com.example.codegardener.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,23 +24,47 @@ public class FeedbackService {
     private final FeedbackLikesRepository feedbackLikesRepository;
     private final LineFeedbackRepository lineFeedbackRepository;
     private final FeedbackCommentRepository feedbackCommentRepository;
+    private final UserRepository userRepository;
+    private final PostRepository postRepository;
+
+    private User findUserByUsername(String username) {
+        return userRepository.findByUserName(username)
+                .orElseThrow(() -> new IllegalArgumentException("인증된 사용자를 찾을 수 없습니다: " + username));
+    }
 
     // ============================================================
     // ✅ 피드백 CRUD
     // ============================================================
 
     // ✅ 피드백 작성
-    public FeedbackResponseDto createFeedback(FeedbackRequestDto dto) {
-        Feedback feedback = dto.toEntity();
-        return FeedbackResponseDto.fromEntity(feedbackRepository.save(feedback));
+    public FeedbackResponseDto createFeedback(FeedbackRequestDto dto, String currentUsername) {
+        User currentUser = findUserByUsername(currentUsername);
+        Post post = postRepository.findById(dto.getPostId())
+                .orElseThrow(() -> new IllegalArgumentException("게시물을 찾을 수 없습니다."));
+
+        Feedback feedback = Feedback.builder()
+                .postId(dto.getPostId())
+                .userId(currentUser.getId())
+                .content(dto.getContent())
+                .rating(dto.getRating())
+                .adoptedTF(false)
+                .likesCount(0)
+                .build();
+
+        Feedback savedFeedback = feedbackRepository.save(feedback);
+
+        post.setFeedbackCount(post.getFeedbackCount() + 1);
+
+        return FeedbackResponseDto.fromEntity(savedFeedback);
     }
 
     // ✅ 피드백 수정 (채택된 피드백은 수정 불가)
-    public FeedbackResponseDto updateFeedback(Long feedbackId, FeedbackRequestDto dto) {
+    public FeedbackResponseDto updateFeedback(Long feedbackId, FeedbackRequestDto dto, String currentUsername) {
+        User currentUser = findUserByUsername(currentUsername);
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new IllegalArgumentException("피드백을 찾을 수 없습니다."));
 
-        if (!feedback.getUserId().equals(dto.getUserId())) {
+        if (!feedback.getUserId().equals(currentUser.getId())) {
             throw new IllegalStateException("본인만 피드백을 수정할 수 있습니다.");
         }
         if (feedback.getAdoptedTF()) {
@@ -51,16 +79,24 @@ public class FeedbackService {
     }
 
     // ✅ 피드백 삭제
-    public void deleteFeedback(Long feedbackId, Long userId) {
+    public void deleteFeedback(Long feedbackId, String currentUsername) {
+        User currentUser = findUserByUsername(currentUsername);
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new IllegalArgumentException("피드백을 찾을 수 없습니다."));
-        if (!feedback.getUserId().equals(userId)) {
+
+        Post post = postRepository.findById(feedback.getPostId())
+                .orElseThrow(() -> new IllegalArgumentException("게시물을 찾을 수 없습니다."));
+
+        if (!feedback.getUserId().equals(currentUser.getId())) {
             throw new IllegalStateException("본인만 피드백을 삭제할 수 있습니다.");
         }
         if (feedback.getAdoptedTF()) {
             throw new IllegalStateException("채택된 피드백은 삭제할 수 없습니다.");
         }
+
         feedbackRepository.delete(feedback);
+
+        post.setFeedbackCount(Math.max(0, post.getFeedbackCount() - 1));
     }
 
     // ✅ 피드백 상세조회 (라인피드백 + 댓글 포함)
@@ -78,7 +114,10 @@ public class FeedbackService {
     }
 
     // ✅ 좋아요 토글
-    public String toggleLike(Long feedbackId, Long userId) {
+    public String toggleLike(Long feedbackId, String currentUsername) {
+        User currentUser = findUserByUsername(currentUsername);
+        Long userId = currentUser.getId();
+
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new IllegalArgumentException("피드백을 찾을 수 없습니다."));
 
@@ -107,13 +146,14 @@ public class FeedbackService {
     // ============================================================
 
     // ✅ [CREATE] 라인피드백 등록
-    public LineFeedbackDto addLineFeedback(Long feedbackId, LineFeedbackDto dto) {
+    public LineFeedbackDto addLineFeedback(Long feedbackId, LineFeedbackDto dto, String currentUsername) {
+        User currentUser = findUserByUsername(currentUsername);
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new IllegalArgumentException("피드백을 찾을 수 없습니다."));
 
         LineFeedback lineFeedback = LineFeedback.builder()
                 .feedback(feedback)
-                .userId(dto.getUserId())
+                .userId(currentUser.getId())
                 .lineNumber(dto.getLineNumber())
                 .endLineNumber(dto.getEndLineNumber())
                 .content(dto.getContent())
@@ -131,14 +171,16 @@ public class FeedbackService {
     }
 
     // ✅ [UPDATE] 라인피드백 수정
-    public LineFeedbackDto updateLineFeedback(Long feedbackId, Long lineFeedbackId, LineFeedbackDto dto) {
+    public LineFeedbackDto updateLineFeedback(Long feedbackId, Long lineFeedbackId, LineFeedbackDto dto, String currentUsername) {
+        User currentUser = findUserByUsername(currentUsername);
         LineFeedback lineFeedback = lineFeedbackRepository.findById(lineFeedbackId)
                 .orElseThrow(() -> new IllegalArgumentException("라인피드백을 찾을 수 없습니다."));
 
         if (!lineFeedback.getFeedback().getFeedbackId().equals(feedbackId)) {
             throw new IllegalStateException("잘못된 피드백 ID입니다.");
         }
-        if (!lineFeedback.getUserId().equals(dto.getUserId())) {
+
+        if (!lineFeedback.getUserId().equals(currentUser.getId())) {
             throw new IllegalStateException("본인만 수정할 수 있습니다.");
         }
 
@@ -148,14 +190,16 @@ public class FeedbackService {
     }
 
     // ✅ [DELETE] 라인피드백 삭제
-    public void deleteLineFeedback(Long feedbackId, Long lineFeedbackId, Long userId) {
+    public void deleteLineFeedback(Long feedbackId, Long lineFeedbackId, String currentUsername) {
+        User currentUser = findUserByUsername(currentUsername);
         LineFeedback lineFeedback = lineFeedbackRepository.findById(lineFeedbackId)
                 .orElseThrow(() -> new IllegalArgumentException("라인피드백을 찾을 수 없습니다."));
 
         if (!lineFeedback.getFeedback().getFeedbackId().equals(feedbackId)) {
             throw new IllegalStateException("잘못된 피드백 ID입니다.");
         }
-        if (!lineFeedback.getUserId().equals(userId)) {
+
+        if (!lineFeedback.getUserId().equals(currentUser.getId())) {
             throw new IllegalStateException("본인만 삭제할 수 있습니다.");
         }
 
@@ -167,13 +211,14 @@ public class FeedbackService {
     // ============================================================
 
     // ✅ 댓글 작성
-    public FeedbackCommentDto addComment(Long feedbackId, FeedbackCommentDto dto) {
+    public FeedbackCommentDto addComment(Long feedbackId, FeedbackCommentDto dto, String currentUsername) {
+        User currentUser = findUserByUsername(currentUsername);
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new IllegalArgumentException("피드백을 찾을 수 없습니다."));
 
         FeedbackComment comment = FeedbackComment.builder()
                 .feedback(feedback)
-                .userId(dto.getUserId())
+                .userId(currentUser.getId())
                 .content(dto.getContent())
                 .build();
 
