@@ -1,11 +1,10 @@
 package com.example.codegardener.post.controller;
 
-import com.example.codegardener.post.dto.PostActionDto;
-import com.example.codegardener.post.dto.PostRequestDto;
-import com.example.codegardener.post.dto.PostResponseDto;
-import com.example.codegardener.post.service.PostService;
+import java.net.URI;
+import java.util.List;
+
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -15,8 +14,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
+
+import com.example.codegardener.post.dto.PostActionDto;
+import com.example.codegardener.post.dto.PostRequestDto;
+import com.example.codegardener.post.dto.PostResponseDto;
+import com.example.codegardener.post.service.PostService;
 
 @RestController
 @RequestMapping("/api/posts")

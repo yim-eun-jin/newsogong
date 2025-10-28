@@ -1,76 +1,79 @@
 package com.example.codegardener.post.domain;
 
-import com.example.codegardener.user.domain.User;
-import jakarta.persistence.*;
-import lombok.*;
 import java.time.LocalDateTime;
+import jakarta.persistence.*;
+
+import lombok.*;
+
+import com.example.codegardener.user.domain.User;
 
 @Entity
 @Table (name = "post")
-@Getter @Setter
+@Getter
+@Setter
 @NoArgsConstructor (access = AccessLevel.PROTECTED)
-@AllArgsConstructor @Builder
+@AllArgsConstructor
+@Builder
 public class Post {
-
+    // 1. 기본 정보
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long postId; //PK
+    private Long postId; // 게시물 ID (PK)
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false) // post.user_id FK
-    private User user;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;  // 게시물 작성자 (FK)
 
-    //-----필수입력-----
+    // 2. 필수 입력 정보
     @Column (nullable = false, length = 200)
-    private String title; //제목
+    private String title;  // 제목
 
     @Column (nullable = false, columnDefinition = "TEXT")
-    private String content; //본문/설명
+    private String content;  // 내용
 
     @Column (nullable = false, columnDefinition = "TEXT")
-    private String code; //코드 스니펫
-
-    // 게시물 카테고리
+    private String code; // 코드 스니펫
+    
     @Column (nullable = false)
-    private Boolean contentsType; //true=개발용,  false=코테용
+    private Boolean contentsType; // 게시물 카테고리 (true: 개발, false: 코딩테스트)
 
     @Column(length = 500)
-    private String langTags;   // 프로그래밍 언어
+    private String langTags;  // 프로그래밍 언어 태그
 
     @Column(length = 500)
-    private String stackTags;  // 기술 스택
+    private String stackTags;  // 기술 스택 태그
 
     @Column (nullable = false, columnDefinition = "TEXT")
-    private String summary; //피드백 원하는 내용
+    private String summary;  // 피드백 받고 싶은 부분
 
-    //-----선택입력-----
+    // 3. 선택 입력 정보
     @Column (length = 300)
-    private String githubRepoUrl; //깃허브 레포주소
+    private String githubRepoUrl; // 깃허브 레포지토리 주소
 
     @Column (columnDefinition = "TEXT")
-    private String problemStatement; //코딩테스트 문제 원문 (선택, 코테일때만사용)
+    private String problemStatement; // 코딩테스트 문제 원문 (contentsType=false 일 때 사용)
 
     @Column(columnDefinition = "LONGTEXT")
     private String aiFeedback; // AI 생성 피드백 (텍스트만 저장)
 
-    // 집계/표시용
+    // 4. 집계 데이터
     @Column (nullable = false)
-    private int likesCount = 0;
+    private int likesCount = 0;  // 좋아요 수
 
     @Column (nullable = false)
-    private int views = 0;
+    private int views = 0;  // 조회수
 
     @Column (nullable = false)
-    private int scrapCount = 0;
+    private int scrapCount = 0;  // 스크랩 수
 
     @Column (nullable = false)
-    private int feedbackCount = 0;
+    private int feedbackCount = 0;  // 달린 피드백 수
 
-    // 타임스탬프
+    // 5. 타임스탬프
     @Column (updatable = false, nullable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt;  // 작성 시간
 
     @Column (nullable = false)
-    private LocalDateTime modifiedAt;
+    private LocalDateTime modifiedAt;  // 최종 수정 시간
 
     @PrePersist
     protected void onCreate(){

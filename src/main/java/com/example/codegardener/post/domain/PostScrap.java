@@ -1,9 +1,10 @@
 package com.example.codegardener.post.domain;
 
 import jakarta.persistence.*;
+
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "Post_Scraps")

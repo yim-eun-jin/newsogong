@@ -2,14 +2,17 @@ package com.example.codegardener.user.dto;
 
 import com.example.codegardener.user.domain.Role;
 import com.example.codegardener.user.domain.User;
+
 import lombok.Getter;
 
 @Getter
 public class UserResponseDto {
+
     private final Long id;
     private final String userName;
     private final String email;
     private final Role role;
+
     private final String userPicture;
     private final Integer points;
     private final String grade;
@@ -18,6 +21,7 @@ public class UserResponseDto {
     private final Integer adoptedFeedbackCount;
 
     public UserResponseDto(User user) {
+
         this.id = user.getId();
         this.userName = user.getUserName();
         this.email = user.getEmail();

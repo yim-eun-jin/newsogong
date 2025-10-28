@@ -1,7 +1,7 @@
 package com.example.codegardener.user.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.AllArgsConstructor;
 
 @Getter
 @AllArgsConstructor

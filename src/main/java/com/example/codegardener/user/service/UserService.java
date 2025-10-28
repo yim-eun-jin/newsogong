@@ -1,5 +1,19 @@
 package com.example.codegardener.user.service;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+
 import com.example.codegardener.feedback.repository.FeedbackRepository;
 import com.example.codegardener.global.jwt.JwtUtil;
 import com.example.codegardener.user.domain.Role;
@@ -8,22 +22,11 @@ import com.example.codegardener.user.dto.LoginRequestDto;
 import com.example.codegardener.user.dto.SignUpRequestDto;
 import com.example.codegardener.user.dto.UserResponseDto;
 import com.example.codegardener.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -55,12 +58,15 @@ public class UserService {
     public String login(LoginRequestDto loginRequestDto) {
         User user = userRepository.findByUserName(loginRequestDto.getUserName())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 아이디입니다."));
+
         if (!passwordEncoder.matches(loginRequestDto.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("비밀번호가 틀렸습니다.");
         }
+
         return jwtUtil.createToken(user.getUserName(), user.getRole());
     }
 
+    // 사용자 프로필 조회
     @Transactional(readOnly = true)
     public UserResponseDto getUserProfile(Long userId) {
         User user = userRepository.findById(userId)
@@ -68,8 +74,9 @@ public class UserService {
         return new UserResponseDto(user);
     }
 
-
-    // 기준별 사용자 목록 조회 (리더보드 페이지에서 사용)
+    // =============================
+    // ==== Leaderboard Service ====
+    // =============================
 
     // 누적 포인트 TOP3
     public List<UserResponseDto> getTop3LeaderboardByPoints() {
