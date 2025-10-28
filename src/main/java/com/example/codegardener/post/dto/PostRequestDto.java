@@ -9,9 +9,6 @@ import lombok.Setter;
 @Setter
 public class PostRequestDto {
 
-    @NotNull(message = "userId는 필수입니다.")
-    private Long userId;
-
     @NotBlank(message = "제목은 필수입니다.")
     private String title;
 
@@ -19,7 +16,7 @@ public class PostRequestDto {
     private String content; // 게시물 설명
 
     @NotBlank(message = "프로그래밍 언어는 필수입니다.")
-    private String languages;   // 프로그래밍언어
+    private String languages;   // 프로그래밍 언어
 
     private String stacks;  // 기술스택
 

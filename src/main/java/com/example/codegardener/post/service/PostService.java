@@ -37,12 +37,11 @@ public class PostService {
     // ====================== CRUD ======================
 
     @Transactional
-    public PostResponseDto create(PostRequestDto dto) {
+    public PostResponseDto create(PostRequestDto dto, String currentUsername) {
         validateCodingTest(dto);
 
-        // 작성자 엔티티 조회 후 연관관계로 설정
-        User author = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("작성자 정보를 찾을 수 없습니다. userId=" + dto.getUserId()));
+        User author = userRepository.findByUserName(currentUsername)
+                .orElseThrow(() -> new IllegalArgumentException("작성자 정보를 찾을 수 없습니다. username=" + currentUsername));
 
         Post p = Post.builder()
                 .user(author)

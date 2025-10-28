@@ -30,11 +30,16 @@ public class PostController {
 
     // ====================== CREATE ======================
     @PostMapping
-    public ResponseEntity<PostResponseDto> create(@Valid @RequestBody PostRequestDto dto) {
-        if (dto.getUserId() == null) {
-            throw new IllegalArgumentException("userId는 필수입니다.");
+    public ResponseEntity<PostResponseDto> create(
+            @Valid @RequestBody PostRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        if (userDetails == null) {
+            throw new IllegalArgumentException("게시물 생성 권한 인증이 필요합니다.");
         }
-        PostResponseDto created = postService.create(dto);
+
+        PostResponseDto created = postService.create(dto, userDetails.getUsername());
+
         return ResponseEntity
                 .created(URI.create("/posts/" + created.getPostId()))
                 .body(created);
@@ -65,7 +70,7 @@ public class PostController {
     public PostResponseDto update(
             @PathVariable Long id,
             @Valid @RequestBody PostRequestDto dto,
-            @AuthenticationPrincipal UserDetails userDetails // 1. UserDetails 주입
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
         if (userDetails == null) {
             throw new IllegalArgumentException("수정 권한 인증이 필요합니다.");
