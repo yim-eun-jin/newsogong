@@ -19,6 +19,7 @@ import com.example.codegardener.feedback.repository.FeedbackRepository;
 import com.example.codegardener.global.jwt.JwtUtil;
 import com.example.codegardener.user.domain.Role;
 import com.example.codegardener.user.domain.User;
+import com.example.codegardener.user.domain.UserProfile;
 import com.example.codegardener.user.dto.LoginRequestDto;
 import com.example.codegardener.user.dto.SignUpRequestDto;
 import com.example.codegardener.user.dto.UserResponseDto;
@@ -49,6 +50,10 @@ public class UserService {
         String encodedPassword = passwordEncoder.encode(signUpRequestDto.getPassword());
         newUser.setPassword(encodedPassword);
         newUser.setRole(Role.USER);
+
+        UserProfile userProfile = new UserProfile();
+        userProfile.setUser(newUser);
+        newUser.setUserProfile(userProfile);
 
         User savedUser = userRepository.save(newUser);
         return new UserResponseDto(savedUser);
