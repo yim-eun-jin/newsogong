@@ -3,8 +3,10 @@ package com.example.codegardener.feedback.controller;
 import com.example.codegardener.feedback.dto.*;
 import com.example.codegardener.feedback.service.FeedbackService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -76,6 +78,33 @@ public class FeedbackController {
     public ResponseEntity<List<FeedbackResponseDto>> getFeedbackListByPost(@PathVariable Long postId) {
         return ResponseEntity.ok(feedbackService.getFeedbackListByPost(postId));
     }
+
+    /**
+     * ✅ [POST] 피드백 채택
+     */
+    @PostMapping("/{feedbackId}/adopt")
+    public ResponseEntity<String> adoptFeedback(
+            @PathVariable Long feedbackId,
+            @AuthenticationPrincipal UserDetails userDetails // 채택을 요청한 사용자 (게시물 작성자)
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        }
+
+        try {
+            feedbackService.adoptFeedback(feedbackId, userDetails.getUsername());
+            return ResponseEntity.ok("피드백이 채택되었습니다.");
+        } catch (IllegalArgumentException e) { // 피드백/게시물/사용자 못 찾음
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalStateException e) { // 이미 채택된 경우
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (AccessDeniedException e) { // 채택 권한 없음
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) { // 그 외 서버 오류
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("피드백 채택 중 오류 발생");
+        }
+    }
+
 
     /**
      * ✅ [POST] 좋아요 토글

@@ -12,6 +12,7 @@ import com.example.codegardener.post.repository.PostRepository;
 import com.example.codegardener.post.repository.PostScrapRepository;
 import com.example.codegardener.user.domain.User;
 import com.example.codegardener.user.domain.Role;
+import com.example.codegardener.user.domain.UserProfile;
 import com.example.codegardener.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +58,15 @@ public class PostService {
                 .build();
 
         Post saved = postRepository.save(p);
+
+        UserProfile authorProfile = saved.getUser().getUserProfile();
+        if (authorProfile != null) {
+            authorProfile.setPostCount(authorProfile.getPostCount() + 1);
+            log.debug("Incremented post count for user {}", author.getUserName());
+        } else {
+            log.warn("UserProfile not found for author {} during post creation.", author.getUserName());
+        }
+
         log.info("[POST] saved postId={}", saved.getPostId());
         return PostResponseDto.from(saved);
     }

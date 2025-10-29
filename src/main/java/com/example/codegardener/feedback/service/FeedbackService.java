@@ -7,6 +7,7 @@ import com.example.codegardener.post.domain.Post;
 import com.example.codegardener.post.repository.PostRepository;
 import com.example.codegardener.user.domain.User;
 import com.example.codegardener.user.domain.Role;
+import com.example.codegardener.user.domain.UserProfile;
 import com.example.codegardener.user.repository.UserRepository;
 import com.example.codegardener.user.service.UserService;
 
@@ -62,6 +63,14 @@ public class FeedbackService {
         Feedback savedFeedback = feedbackRepository.save(feedback);
 
         post.setFeedbackCount(post.getFeedbackCount() + 1);
+
+        UserProfile authorProfile = currentUser.getUserProfile();
+        if (authorProfile != null) {
+            authorProfile.setTotalFeedbackCount(authorProfile.getTotalFeedbackCount() + 1);
+            log.debug("Incremented total feedback count for user {}", currentUser.getUserName());
+        } else {
+            log.warn("UserProfile not found for author {} during feedback creation.", currentUser.getUserName());
+        }
 
         return FeedbackResponseDto.fromEntity(savedFeedback);
     }
@@ -174,7 +183,6 @@ public class FeedbackService {
         if (feedback.getAdoptedTF()) {
             throw new IllegalStateException("이미 채택된 피드백입니다.");
         }
-
 
         // 피드백 채택 상태 변경
         feedback.setAdoptedTF(true);
