@@ -1,5 +1,6 @@
 package com.example.codegardener.user.controller;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -16,6 +17,7 @@ import com.example.codegardener.user.dto.SignUpRequestDto;
 import com.example.codegardener.user.dto.UserResponseDto;
 import com.example.codegardener.user.service.UserService;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/user")
@@ -40,6 +42,27 @@ public class UserController {
         UserResponseDto userResponseDto = userService.getUserProfile(userId);
         return ResponseEntity.ok(userResponseDto);
     }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<String> deleteMyAccount(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증이 필요합니다.");
+        }
+
+        try {
+            userService.deleteCurrentUser(userDetails.getUsername());
+            // TODO: 탈퇴 성공 후 클라이언트에게 JWT 토큰을 삭제하도록 안내 필요 (예: 응답 헤더나 본문에 명시)
+            return ResponseEntity.ok("회원 탈퇴가 완료되었습니다.");
+        } catch (IllegalStateException e) { // 관리자 탈퇴 시도 등
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) { // 그 외 예외 처리
+            log.error("Error deleting user account: {}", userDetails.getUsername(), e); // 로그 추가
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("회원 탈퇴 중 오류가 발생했습니다.");
+        }
+    }
+
 
     // ===== 관리자용 API =====
 

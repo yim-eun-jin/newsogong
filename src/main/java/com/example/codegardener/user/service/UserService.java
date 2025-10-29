@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import com.example.codegardener.feedback.repository.FeedbackRepository;
 import com.example.codegardener.global.jwt.JwtUtil;
@@ -25,6 +26,7 @@ import com.example.codegardener.user.dto.SignUpRequestDto;
 import com.example.codegardener.user.dto.UserResponseDto;
 import com.example.codegardener.user.repository.UserRepository;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -136,6 +138,23 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    // 회원 탈퇴
+    @Transactional
+    public void deleteCurrentUser(String currentUsername) {
+        User currentUser = userRepository.findByUserName(currentUsername)
+                .orElseThrow(() -> new IllegalArgumentException("인증된 사용자를 찾을 수 없습니다."));
+
+        if (currentUser.getRole() == Role.ADMIN) {
+            throw new IllegalStateException("관리자 계정은 스스로 탈퇴할 수 없습니다. 다른 관리자에게 요청하세요.");
+        }
+
+        log.info("User '{}' (userId={}) is deleting their own account.",
+                currentUser.getUserName(), currentUser.getId());
+        userRepository.delete(currentUser);
+
+        // TODO: 관리자 삭제와 동일하게, 사용자가 작성한 게시물, 피드백 등의 처리 정책 필요
+    }
+
     // ===== 관리자 기능 =====
     @Transactional
     public void deleteUserByAdmin(Long userIdToDelete, String adminUsername) {
@@ -152,6 +171,9 @@ public class UserService {
         if (userToDelete.getId().equals(adminUser.getId())) {
             throw new IllegalArgumentException("자기 자신을 삭제할 수 없습니다.");
         }
+
+        log.warn("[ADMIN] Admin '{}' is deleting user '{}' (userId={})",
+                adminUsername, userToDelete.getUserName(), userIdToDelete);
 
         userRepository.delete(userToDelete);
 

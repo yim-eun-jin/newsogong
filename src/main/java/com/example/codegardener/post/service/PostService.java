@@ -2,8 +2,8 @@ package com.example.codegardener.post.service;
 
 import com.example.codegardener.ai.service.AiFeedbackService;
 import com.example.codegardener.post.domain.Post;
-import com.example.codegardener.post.domain.PostLikes;
-import com.example.codegardener.post.domain.PostScraps;
+import com.example.codegardener.post.domain.PostLike;
+import com.example.codegardener.post.domain.PostScrap;
 import com.example.codegardener.post.dto.PostActionDto;
 import com.example.codegardener.post.dto.PostRequestDto;
 import com.example.codegardener.post.dto.PostResponseDto;
@@ -272,13 +272,13 @@ public class PostService {
         Post post = postRepository.findById(dto.getPostId())
                 .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다. ID: " + dto.getPostId()));
 
-        Optional<PostLikes> existingLike = postLikeRepository.findByUserAndPost(user, post);
+        Optional<PostLike> existingLike = postLikeRepository.findByUserAndPost(user, post);
 
         if (existingLike.isPresent()) {
             postLikeRepository.delete(existingLike.get());
             post.setLikesCount(Math.max(0, post.getLikesCount() - 1));
         } else {
-            PostLikes newLike = new PostLikes();
+            PostLike newLike = new PostLike();
             newLike.setUser(user);
             newLike.setPost(post);
             postLikeRepository.save(newLike);
@@ -293,13 +293,13 @@ public class PostService {
         Post post = postRepository.findById(dto.getPostId())
                 .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다. ID: " + dto.getPostId()));
 
-        Optional<PostScraps> existingScrap = postScrapRepository.findByUserAndPost(user, post);
+        Optional<PostScrap> existingScrap = postScrapRepository.findByUserAndPost(user, post);
 
         if (existingScrap.isPresent()) {
             postScrapRepository.delete(existingScrap.get());
             post.setScrapCount(Math.max(0, post.getScrapCount() - 1));
         } else {
-            PostScraps newScrap = new PostScraps();
+            PostScrap newScrap = new PostScrap();
             newScrap.setUser(user);
             newScrap.setPost(post);
             postScrapRepository.save(newScrap);
@@ -312,10 +312,10 @@ public class PostService {
         User user = userRepository.findByUserName(username)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        List<PostScraps> scraps = postScrapRepository.findAllByUser(user);
+        List<PostScrap> scraps = postScrapRepository.findAllByUser(user);
 
         List<Post> scrappedPosts = scraps.stream()
-                .map(PostScraps::getPost)
+                .map(PostScrap::getPost)
                 .filter(Objects::nonNull)
                 .toList();
 

@@ -129,7 +129,7 @@ public class FeedbackService {
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new IllegalArgumentException("피드백을 찾을 수 없습니다."));
 
-        Optional<FeedbackLikes> existingLike =
+        Optional<FeedbackLike> existingLike =
                 feedbackLikesRepository.findByUserIdAndFeedback_FeedbackId(userId, feedbackId);
 
         if (existingLike.isPresent()) {
@@ -138,7 +138,7 @@ public class FeedbackService {
             feedbackRepository.save(feedback);
             return "좋아요 취소";
         } else {
-            FeedbackLikes like = FeedbackLikes.builder()
+            FeedbackLike like = FeedbackLike.builder()
                     .feedback(feedback)
                     .userId(userId)
                     .build();

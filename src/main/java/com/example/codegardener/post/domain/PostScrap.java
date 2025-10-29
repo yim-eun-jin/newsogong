@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Setter
 @NoArgsConstructor
-public class PostScraps {
+public class PostScrap {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long postScrapId;
