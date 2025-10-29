@@ -1,5 +1,6 @@
 package com.example.codegardener.user.domain;
 
+import java.time.LocalDate;
 import jakarta.persistence.*;
 
 import lombok.Getter;
@@ -39,4 +40,7 @@ public class UserProfile {
 
     @Column(name = "adopted_feedback_count", nullable = false)
     private Integer adoptedFeedbackCount = 0;
+
+    @Column(name = "last_attendance_date")
+    private LocalDate lastAttendanceDate;
 }

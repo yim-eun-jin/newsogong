@@ -8,15 +8,20 @@ import com.example.codegardener.post.repository.PostRepository;
 import com.example.codegardener.user.domain.User;
 import com.example.codegardener.user.domain.Role;
 import com.example.codegardener.user.repository.UserRepository;
+import com.example.codegardener.user.service.UserService;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -28,6 +33,7 @@ public class FeedbackService {
     private final FeedbackCommentRepository feedbackCommentRepository;
     private final UserRepository userRepository;
     private final PostRepository postRepository;
+    private final UserService userService;
 
     private User findUserByUsername(String username) {
         return userRepository.findByUserName(username)
@@ -147,6 +153,44 @@ public class FeedbackService {
             feedbackRepository.save(feedback);
             return "좋아요 추가";
         }
+    }
+
+    // 피드백 채택
+    @Transactional
+    public void adoptFeedback(Long feedbackId, String postAuthorUsername) {
+        // 채택 권한 확인 (게시물 작성자만 가능)
+        User postAuthor = userRepository.findByUserName(postAuthorUsername)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + postAuthorUsername));
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new IllegalArgumentException("피드백을 찾을 수 없습니다: " + feedbackId));
+        Post post = postRepository.findById(feedback.getPostId())
+                .orElseThrow(() -> new IllegalArgumentException("게시물을 찾을 수 없습니다: " + feedback.getPostId()));
+
+        if (!post.getUser().getId().equals(postAuthor.getId())) {
+            throw new AccessDeniedException("게시물 작성자만 피드백을 채택할 수 있습니다.");
+        }
+
+        // 이미 채택된 피드백인지 확인
+        if (feedback.getAdoptedTF()) {
+            throw new IllegalStateException("이미 채택된 피드백입니다.");
+        }
+
+
+        // 피드백 채택 상태 변경
+        feedback.setAdoptedTF(true);
+
+        // 피드백 작성자(User 객체) 조회
+        User feedbackAuthor = userRepository.findById(feedback.getUserId())
+                .orElse(null); // 작성자가 탈퇴했을 수 있음
+
+        // 피드백 작성자에게 포인트 지급
+        if (feedbackAuthor != null) {
+            userService.awardPointsForAdoptedFeedback(feedbackAuthor); // 포인트 지급 및 채택 카운트 증가
+        } else {
+            log.warn("Feedback author (userId={}) not found for awarding points.", feedback.getUserId());
+        }
+
+        log.info("Feedback {} adopted for post {} by user {}", feedbackId, post.getPostId(), postAuthorUsername);
     }
 
     // ============================================================

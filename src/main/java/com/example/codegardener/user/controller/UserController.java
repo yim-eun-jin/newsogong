@@ -5,7 +5,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -43,7 +42,28 @@ public class UserController {
         return ResponseEntity.ok(userResponseDto);
     }
 
-    @DeleteMapping("/delete")
+    // 출석 체크
+    @PostMapping("/attendance")
+    public ResponseEntity<String> checkAttendance(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        }
+
+        try {
+            String message = userService.recordAttendance(userDetails.getUsername());
+            return ResponseEntity.ok(message);
+        } catch (IllegalArgumentException e) { // 사용자를 찾을 수 없는 경우 등
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) { // 그 외 서버 오류
+            log.error("Error recording attendance for user: {}", userDetails.getUsername(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("출석 처리 중 오류가 발생했습니다.");
+        }
+    }
+
+
+    @DeleteMapping("/me")
     public ResponseEntity<String> deleteMyAccount(
             @AuthenticationPrincipal UserDetails userDetails
     ) {

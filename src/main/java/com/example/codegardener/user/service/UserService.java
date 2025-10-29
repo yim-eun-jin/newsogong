@@ -1,5 +1,6 @@
 package com.example.codegardener.user.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -36,6 +37,11 @@ public class UserService {
     private final JwtUtil jwtUtil;
     private final FeedbackRepository feedbackRepository;
 
+    private static final String GRADE_SEED = "새싹 개발자";
+    private static final String GRADE_LEAF = "잎새 개발자";
+    private static final String GRADE_TREE = "나무 개발자";
+    private static final String GRADE_SAGE = "숲의 현자";
+
     // 회원 가입
     @Transactional
     public UserResponseDto signUp(SignUpRequestDto signUpRequestDto) {
@@ -55,9 +61,14 @@ public class UserService {
 
         UserProfile userProfile = new UserProfile();
         userProfile.setUser(newUser);
+        userProfile.setPoints(1000);
         newUser.setUserProfile(userProfile);
 
+        updateGrade(userProfile);
+
         User savedUser = userRepository.save(newUser);
+        log.info("New user signed up: {} (ID: {}), initial points: 1000, grade: {}",
+                savedUser.getUserName(), savedUser.getId(), savedUser.getUserProfile().getGrade());
         return new UserResponseDto(savedUser);
     }
 
@@ -153,6 +164,103 @@ public class UserService {
         userRepository.delete(currentUser);
 
         // TODO: 관리자 삭제와 동일하게, 사용자가 작성한 게시물, 피드백 등의 처리 정책 필요
+    }
+
+    // ===== 포인트 및 등급 관련 =====
+    @Transactional
+    public void addPoints(User user, int pointsToAdd, String reason) {
+        if (pointsToAdd <= 0) {
+            log.warn("Attempted to add non-positive points ({}) to user {}", pointsToAdd, user.getUserName());
+            return;
+        }
+
+        UserProfile userProfile = getUserProfileEntity(user);
+        int currentPoints = userProfile.getPoints();
+        userProfile.setPoints(currentPoints + pointsToAdd);
+
+        updateGrade(userProfile); // 등급 업데이트
+
+        log.info("Added {} points to user {} for [{}]. New points: {}, New grade: {}",
+                pointsToAdd, user.getUserName(), reason, userProfile.getPoints(), userProfile.getGrade());
+    }
+
+    @Transactional
+    public void subtractPoints(User user, int pointsToSubtract, String reason) {
+        if (pointsToSubtract <= 0) {
+            log.warn("Attempted to subtract non-positive points ({}) from user {}", pointsToSubtract, user.getUserName());
+            return;
+        }
+
+        UserProfile userProfile = getUserProfileEntity(user);
+        int currentPoints = userProfile.getPoints();
+
+        if (currentPoints < pointsToSubtract) {
+            log.warn("User {} has insufficient points ({}) to subtract {}.", user.getUserName(), currentPoints, pointsToSubtract);
+            userProfile.setPoints(0); // 0으로 만들기 (또는 예외 처리)
+        } else {
+            userProfile.setPoints(currentPoints - pointsToSubtract);
+        }
+
+        updateGrade(userProfile); // 등급 업데이트
+
+        log.info("Subtracted {} points from user {} for [{}]. New points: {}, New grade: {}",
+                pointsToSubtract, user.getUserName(), reason, userProfile.getPoints(), userProfile.getGrade());
+    }
+
+    private void updateGrade(UserProfile userProfile) {
+        int points = userProfile.getPoints();
+        String newGrade;
+
+        if (points >= 10000) {
+            newGrade = GRADE_SAGE;
+        } else if (points >= 5000) {
+            newGrade = GRADE_TREE;
+        } else if (points >= 2000) {
+            newGrade = GRADE_LEAF;
+        } else {
+            newGrade = GRADE_SEED;
+        }
+
+        if (!newGrade.equals(userProfile.getGrade())) {
+            log.info("User {}'s grade changed from {} to {}",
+                    userProfile.getUser().getUserName(), userProfile.getGrade(), newGrade);
+            userProfile.setGrade(newGrade);
+        }
+    }
+
+    private UserProfile getUserProfileEntity(User user) {
+        UserProfile profile = user.getUserProfile();
+        if (profile == null) {
+            log.error("UserProfile not found for user: {}", user.getUserName());
+            throw new IllegalStateException("사용자 프로필 정보를 찾을 수 없습니다.");
+        }
+        return profile;
+    }
+
+    @Transactional
+    public void awardPointsForAdoptedFeedback(User feedbackAuthor) {
+        addPoints(feedbackAuthor, 100, "피드백 채택");
+        UserProfile profile = getUserProfileEntity(feedbackAuthor);
+        profile.setAdoptedFeedbackCount(profile.getAdoptedFeedbackCount() + 1);
+    }
+
+    @Transactional
+    public String recordAttendance(String username) {
+        User user = userRepository.findByUserName(username)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        LocalDate today = LocalDate.now();
+        UserProfile userProfile = getUserProfileEntity(user);
+
+        // 마지막 출석일 확인
+        if (userProfile.getLastAttendanceDate() != null && userProfile.getLastAttendanceDate().isEqual(today)) {
+            return "오늘은 이미 출석했습니다.";
+        }
+
+        // 출석 처리: 포인트 추가 및 마지막 출석 날짜 업데이트
+        addPoints(user, 50, "일일 출석");
+        userProfile.setLastAttendanceDate(today);
+
+        return "출석 완료! 50 포인트가 지급되었습니다.";
     }
 
     // ===== 관리자 기능 =====
