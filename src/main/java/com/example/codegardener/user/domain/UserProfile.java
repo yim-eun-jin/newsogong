@@ -7,7 +7,7 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "UserProfile")
+@Table(name = "user_profile")
 @Getter
 @Setter
 @NoArgsConstructor
