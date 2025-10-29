@@ -4,7 +4,6 @@ import com.example.codegardener.ai.service.AiFeedbackService;
 import com.example.codegardener.post.domain.Post;
 import com.example.codegardener.post.domain.PostLike;
 import com.example.codegardener.post.domain.PostScrap;
-import com.example.codegardener.post.domain.PostScrapId;
 import com.example.codegardener.post.dto.PostActionDto;
 import com.example.codegardener.post.dto.PostRequestDto;
 import com.example.codegardener.post.dto.PostResponseDto;
@@ -268,17 +267,20 @@ public class PostService {
 
     @Transactional
     public void toggleLike(PostActionDto dto) {
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. ID: " + dto.getUserId()));
         Post post = postRepository.findById(dto.getPostId())
-                .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다. ID: " + dto.getPostId()));
 
-        Optional<PostLike> existingLike = postLikeRepository.findByUserIdAndPostId(dto.getUserId(), dto.getPostId());
+        Optional<PostLike> existingLike = postLikeRepository.findByUserAndPost(user, post);
+
         if (existingLike.isPresent()) {
             postLikeRepository.delete(existingLike.get());
             post.setLikesCount(Math.max(0, post.getLikesCount() - 1));
         } else {
             PostLike newLike = new PostLike();
-            newLike.setUserId(dto.getUserId());
-            newLike.setPostId(dto.getPostId());
+            newLike.setUser(user);
+            newLike.setPost(post);
             postLikeRepository.save(newLike);
             post.setLikesCount(post.getLikesCount() + 1);
         }
@@ -286,17 +288,20 @@ public class PostService {
 
     @Transactional
     public void toggleScrap(PostActionDto dto) {
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. ID: " + dto.getUserId()));
         Post post = postRepository.findById(dto.getPostId())
-                .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("게시물이 존재하지 않습니다. ID: " + dto.getPostId()));
 
-        Optional<PostScrap> existingScrap = postScrapRepository.findById(new PostScrapId(dto.getUserId(), dto.getPostId()));
+        Optional<PostScrap> existingScrap = postScrapRepository.findByUserAndPost(user, post);
+
         if (existingScrap.isPresent()) {
             postScrapRepository.delete(existingScrap.get());
             post.setScrapCount(Math.max(0, post.getScrapCount() - 1));
         } else {
             PostScrap newScrap = new PostScrap();
-            newScrap.setUserId(dto.getUserId());
-            newScrap.setPostId(dto.getPostId());
+            newScrap.setUser(user);
+            newScrap.setPost(post);
             postScrapRepository.save(newScrap);
             post.setScrapCount(post.getScrapCount() + 1);
         }
@@ -306,19 +311,19 @@ public class PostService {
     public List<PostResponseDto> getMyScrappedPosts(String username) {
         User user = userRepository.findByUserName(username)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        Long userId = user.getId();
 
-        List<PostScrap> scraps = postScrapRepository.findAllByUserId(userId);
+        List<PostScrap> scraps = postScrapRepository.findAllByUser(user);
 
-        List<Long> postIds = scraps.stream()
-                .map(PostScrap::getPostId)
+        List<Post> scrappedPosts = scraps.stream()
+                .map(PostScrap::getPost)
+                .filter(Objects::nonNull)
                 .toList();
 
-        if (postIds.isEmpty()) {
+        if (scrappedPosts.isEmpty()) {
             return Collections.emptyList();
         }
 
-        return postRepository.findAllById(postIds).stream()
+        return scrappedPosts.stream()
                 .map(PostResponseDto::from)
                 .collect(Collectors.toList());
     }
